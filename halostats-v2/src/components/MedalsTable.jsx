@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { SectionLabel, Avatar, FilterBar } from "./UI";
+import { Avatar, FilterBar } from "./UI";
 import { DATE_RANGES, GAME_MODE_FILTERS, filterByDate } from "../utils/stats";
 import { isInterestingMedal, getMedalName } from "../utils/medals";
 import PLAYERS from "../players";
