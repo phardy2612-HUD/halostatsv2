@@ -1,13 +1,14 @@
 import React from "react";
 
+// Player avatar circle
 export function Avatar({ player, size = 36 }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: "50%", flexShrink: 0,
-      background: player.color + "1a",
-      border: `1.5px solid ${player.color}`,
+      background: player.color + "22",
+      border: `1.5px solid ${player.color}55`,
       display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: "var(--font-mono)", fontSize: size * 0.32, fontWeight: 700,
+      fontFamily: "var(--font-mono)", fontSize: size * 0.3, fontWeight: 700,
       color: player.color, letterSpacing: 0,
     }}>
       {player.initials}
@@ -15,29 +16,14 @@ export function Avatar({ player, size = 36 }) {
   );
 }
 
-export function PlayerTag({ player, size = 32 }) {
+// Section header label — Waypoint style
+export function SectionLabel({ children, accent }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <Avatar player={player} size={size} />
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+      {accent && <div style={{ width: 2, height: 12, background: "var(--accent)", borderRadius: 1, flexShrink: 0 }} />}
       <span style={{
-        fontFamily: "var(--font-hud)", fontSize: 14, fontWeight: 700,
-        color: "var(--text)", letterSpacing: 0.3,
-      }}>
-        {player.gamertag}
-      </span>
-    </div>
-  );
-}
-
-export function SectionLabel({ children }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 8, marginBottom: 12,
-    }}>
-      <div style={{ width: 3, height: 14, background: "var(--accent)", borderRadius: 2, flexShrink: 0 }} />
-      <span style={{
-        fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700,
-        color: "var(--text-muted)", letterSpacing: 2.5, textTransform: "uppercase",
+        fontFamily: "var(--font-ui)", fontSize: 11, fontWeight: 600,
+        color: "var(--text-muted)", letterSpacing: "0.12em", textTransform: "uppercase",
       }}>
         {children}
       </span>
@@ -45,20 +31,18 @@ export function SectionLabel({ children }) {
   );
 }
 
-export function Spinner({ size = 40, label }) {
+// Loading spinner
+export function Spinner({ size = 36, label }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: 40 }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: 48 }}>
       <div style={{
         width: size, height: size, borderRadius: "50%",
-        border: "2px solid var(--border2)",
+        border: "1.5px solid rgba(255,255,255,0.08)",
         borderTopColor: "var(--accent)",
-        animation: "spin 0.75s linear infinite",
+        animation: "spin 0.7s linear infinite",
       }} />
       {label && (
-        <span style={{
-          fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-muted)",
-          letterSpacing: 2, textTransform: "uppercase",
-        }}>
+        <span style={{ fontFamily: "var(--font-ui)", fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
           {label}
         </span>
       )}
@@ -66,107 +50,102 @@ export function Spinner({ size = 40, label }) {
   );
 }
 
+// Error banner
 export function ErrorBanner({ message, onDismiss }) {
   return (
     <div style={{
-      background: "var(--loss-dim)", border: "1px solid var(--loss)",
-      borderRadius: "var(--r)", padding: "12px 16px",
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      gap: 12,
+      background: "var(--loss-dim)", border: "1px solid rgba(217,83,79,0.3)",
+      borderRadius: "var(--r)", padding: "10px 14px",
+      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
     }}>
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--loss)" }}>
-        ⚠ {message}
+      <span style={{ fontFamily: "var(--font-ui)", fontSize: 12, color: "var(--loss)", letterSpacing: "0.04em" }}>
+        {message}
       </span>
       {onDismiss && (
-        <button onClick={onDismiss} style={{
-          background: "none", border: "none", color: "var(--text-muted)",
-          cursor: "pointer", fontSize: 16, padding: 0,
-        }}>×</button>
+        <button onClick={onDismiss} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>×</button>
       )}
     </div>
   );
 }
 
+// Stat cell with best/worst highlight
 export function StatValue({ value, isBest, isWorst, format }) {
   const color = isBest ? "var(--win)" : isWorst ? "var(--loss)" : "var(--text)";
   return (
-    <span style={{ color, fontWeight: isBest || isWorst ? 700 : 400 }}>
+    <span style={{ color, fontWeight: isBest ? 600 : 400 }}>
       {format ? format(value) : value}
-      {isBest  && <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.7 }}>▲</span>}
-      {isWorst && <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.7 }}>▼</span>}
     </span>
   );
 }
 
+// W/L/D pill
 export function OutcomePill({ outcome }) {
-  // outcome: 2=win, 3=loss, 1=draw
   const cfg = outcome === 2
     ? { label: "W", color: "var(--win)",  bg: "var(--win-dim)"  }
     : outcome === 3
     ? { label: "L", color: "var(--loss)", bg: "var(--loss-dim)" }
-    : { label: "D", color: "var(--draw)", bg: "var(--draw-dim)" };
-
+    : { label: "D", color: "var(--draw)", bg: "rgba(240,173,78,0.12)" };
   return (
     <span style={{
-      fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700,
+      fontFamily: "var(--font-ui)", fontSize: 11, fontWeight: 700,
       color: cfg.color, background: cfg.bg,
-      padding: "2px 7px", borderRadius: 4, letterSpacing: 0.5,
+      padding: "2px 6px", borderRadius: 2,
+      letterSpacing: "0.05em", textTransform: "uppercase",
     }}>
       {cfg.label}
     </span>
   );
 }
 
+// Primary CTA button
 export function GlowButton({ children, onClick, disabled, variant = "primary" }) {
   const isPrimary = variant === "primary";
   return (
     <button onClick={onClick} disabled={disabled} style={{
-      fontFamily: "var(--font-hud)", fontSize: 14, fontWeight: 700,
-      letterSpacing: 1.5, textTransform: "uppercase",
-      padding: "12px 24px", borderRadius: "var(--r)",
-      background: disabled ? "var(--surface2)" : isPrimary ? "var(--accent)" : "var(--surface2)",
-      color: disabled ? "var(--text-muted)" : isPrimary ? "var(--bg)" : "var(--text)",
+      fontFamily: "var(--font-ui)", fontSize: 13, fontWeight: 700,
+      letterSpacing: "0.1em", textTransform: "uppercase",
+      padding: "12px 28px", borderRadius: "var(--r)",
+      background: disabled ? "var(--surface3)" : isPrimary ? "var(--accent)" : "var(--surface2)",
+      color: disabled ? "var(--text-muted)" : isPrimary ? "#000" : "var(--text)",
       border: `1px solid ${disabled ? "var(--border)" : isPrimary ? "var(--accent)" : "var(--border2)"}`,
-      boxShadow: disabled || !isPrimary ? "none" : "0 0 24px var(--accent-glow)",
       cursor: disabled ? "not-allowed" : "pointer",
-      transition: "all 0.15s",
+      transition: "all 0.12s",
     }}>
       {children}
     </button>
   );
 }
 
+// Bottom tab bar
 export function TabBar({ tabs, active, onChange }) {
   return (
     <nav style={{
       position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
-      background: "rgba(7,8,12,0.96)", backdropFilter: "blur(24px)",
+      background: "rgba(10,10,10,0.97)", backdropFilter: "blur(20px)",
       borderTop: "1px solid var(--border2)",
       display: "flex",
-      paddingBottom: "max(10px, env(safe-area-inset-bottom))",
+      paddingBottom: "max(8px, env(safe-area-inset-bottom))",
     }}>
       {tabs.map(tab => {
         const isActive = active === tab.id;
         return (
           <button key={tab.id} onClick={() => onChange(tab.id)} style={{
             flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-            gap: 3, padding: "10px 0 0", background: "none", border: "none",
+            gap: 4, padding: "10px 0 0", background: "none", border: "none",
             cursor: "pointer", position: "relative",
           }}>
             {isActive && (
               <div style={{
                 position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
-                width: 28, height: 2, background: "var(--accent)",
-                borderRadius: "0 0 2px 2px",
-                boxShadow: "0 0 8px var(--accent-glow)",
+                width: 24, height: 2, background: "var(--accent)", borderRadius: "0 0 2px 2px",
               }} />
             )}
-            <span style={{ fontSize: 18 }}>{tab.icon}</span>
+            <span style={{ fontSize: 17 }}>{tab.icon}</span>
             <span style={{
-              fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: 1.5,
+              fontFamily: "var(--font-ui)", fontSize: 9, letterSpacing: "0.1em",
               textTransform: "uppercase",
               color: isActive ? "var(--accent)" : "var(--text-muted)",
-              transition: "color 0.15s",
+              transition: "color 0.12s",
             }}>
               {tab.label}
             </span>
@@ -177,31 +156,7 @@ export function TabBar({ tabs, active, onChange }) {
   );
 }
 
+// Filter row wrapper
 export function FilterBar({ children }) {
-  return (
-    <div style={{
-      display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center",
-    }}>
-      {children}
-    </div>
-  );
-}
-
-export function MiniStat({ label, value, color }) {
-  return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{
-        fontFamily: "var(--font-mono)", fontSize: 15, fontWeight: 700,
-        color: color || "var(--text)",
-      }}>
-        {value}
-      </div>
-      <div style={{
-        fontFamily: "var(--font-mono)", fontSize: 8, color: "var(--text-muted)",
-        letterSpacing: 1.5, textTransform: "uppercase", marginTop: 2,
-      }}>
-        {label}
-      </div>
-    </div>
-  );
+  return <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>{children}</div>;
 }
