@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Avatar, FilterBar } from "./UI";
-import { DATE_RANGES, GAME_MODE_FILTERS, filterByDate } from "../utils/stats";
-import { isInterestingMedal, getMedalName } from "../utils/medals";
+import { getMedalName, isInterestingMedal } from "../utils/medals";
+import { filterByDate, DATE_RANGES, GAME_MODE_FILTERS } from "../utils/stats";
 import PLAYERS from "../players";
 
 const DATE_OPTIONS = Object.keys(DATE_RANGES);
@@ -9,67 +9,63 @@ const MODE_OPTIONS = Object.keys(GAME_MODE_FILTERS);
 
 export default function MedalsTable({ squadData }) {
   const [dateRange, setDateRange] = useState("This Month");
-  const [gameMode,  setGameMode]  = useState("All");
-  const [sortBy,    setSortBy]    = useState("total");
+  const [gameMode, setGameMode]   = useState("All");
+  const [showAll,  setShowAll]    = useState(false);
 
-  const { medalRows, players } = useMemo(() => {
-    if (!squadData) return { medalRows: [], players: [] };
+  // Build medal totals per player
+  const { players, medals } = useMemo(() => {
+    if (!squadData) return { players: [], medals: [] };
 
     const modeFilter = GAME_MODE_FILTERS[gameMode] || (() => true);
-    const playerConfigs = squadData.players.map(pd => ({
-      ...pd,
+    const playerList = squadData.players.map(pd => ({
+      gamertag: pd.gamertag,
       config: PLAYERS.find(p => p.gamertag.toLowerCase() === pd.gamertag.toLowerCase())
-        || { gamertag: pd.gamertag, color: "#888", initials: "??" },
-      filteredMatches: filterByDate(pd.matches || [], dateRange).filter(modeFilter),
+              || { gamertag: pd.gamertag, color: "#888", initials: "??" },
     }));
 
     // Aggregate medals per player
-    const playerMedalTotals = playerConfigs.map(p => {
-      const totals = {};
-      p.filteredMatches.forEach(m => {
+    const perPlayer = {}; // { gamertag: { nameId: count } }
+    squadData.players.forEach(pd => {
+      perPlayer[pd.gamertag] = {};
+      const filtered = filterByDate(pd.matches || [], dateRange).filter(modeFilter);
+      filtered.forEach(m => {
         (m.medals || []).forEach(med => {
-          if (isInterestingMedal(med.NameId)) {
-            totals[med.NameId] = (totals[med.NameId] || 0) + med.Count;
-          }
+          perPlayer[pd.gamertag][med.NameId] = (perPlayer[pd.gamertag][med.NameId] || 0) + med.Count;
         });
       });
-      return totals;
     });
 
-    // Collect all interesting medal IDs that any player has
-    const allMedalIds = new Set();
-    playerMedalTotals.forEach(totals => Object.keys(totals).forEach(id => allMedalIds.add(Number(id))));
+    // Collect all medal IDs that appear across all players
+    const allIds = new Set();
+    Object.values(perPlayer).forEach(obj => Object.keys(obj).forEach(id => allIds.add(Number(id))));
 
-    // Build rows
-    const rows = [...allMedalIds].map(nameId => {
-      const counts = playerConfigs.map((_, i) => playerMedalTotals[i][nameId] || 0);
-      return {
-        nameId,
-        name: getMedalName(nameId),
-        counts,
-        total: counts.reduce((s, v) => s + v, 0),
-      };
-    });
+    // Filter: highlighted only unless showAll
+    const filteredIds = [...allIds].filter(id => showAll || isInterestingMedal(id));
 
-    // Sort
-    rows.sort((a, b) => sortBy === "name" ? a.name.localeCompare(b.name) : b.total - a.total);
+    // Build rows: { nameId, name, counts: { gamertag: n }, total }
+    const medalRows = filteredIds.map(id => {
+      const counts = {};
+      let total = 0;
+      playerList.forEach(p => {
+        counts[p.gamertag] = perPlayer[p.gamertag]?.[id] || 0;
+        total += counts[p.gamertag];
+      });
+      return { nameId: id, name: getMedalName(id), counts, total };
+    }).filter(r => r.total > 0)
+      .sort((a, b) => b.total - a.total);
 
-    return { medalRows: rows, players: playerConfigs };
-  }, [squadData, dateRange, gameMode, sortBy]);
+    return { players: playerList, medals: medalRows };
+  }, [squadData, dateRange, gameMode, showAll]);
 
   if (!squadData) return null;
-  if (!medalRows.length) return (
-    <div style={{ textAlign: "center", padding: 40, color: "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
-      No medal data for this period
-    </div>
-  );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }} className="fade-up">
+
       {/* Filters */}
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "var(--text-muted)", letterSpacing: 2, marginBottom: 6, textTransform: "uppercase" }}>Date Range</div>
+          <div style={{ fontFamily: "var(--font-ui)", fontSize: 10, color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Period</div>
           <FilterBar>
             {DATE_OPTIONS.map(opt => (
               <button key={opt} className={`chip ${dateRange === opt ? "active" : ""}`} onClick={() => setDateRange(opt)}>{opt}</button>
@@ -77,70 +73,80 @@ export default function MedalsTable({ squadData }) {
           </FilterBar>
         </div>
         <div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "var(--text-muted)", letterSpacing: 2, marginBottom: 6, textTransform: "uppercase" }}>Mode</div>
+          <div style={{ fontFamily: "var(--font-ui)", fontSize: 10, color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Mode</div>
           <FilterBar>
             {MODE_OPTIONS.map(opt => (
               <button key={opt} className={`chip ${gameMode === opt ? "active" : ""}`} onClick={() => setGameMode(opt)}>{opt}</button>
             ))}
           </FilterBar>
         </div>
+        <div style={{ display: "flex", alignItems: "flex-end" }}>
+          <button className={`chip ${showAll ? "active" : ""}`} onClick={() => setShowAll(v => !v)}>
+            {showAll ? "Highlights Only" : "Show All"}
+          </button>
+        </div>
       </div>
 
-      <div className="card" style={{ overflowX: "auto" }}>
-        <table>
-          <thead>
-            <tr>
-              <th style={{ textAlign: "left", minWidth: 160, cursor: "pointer" }} onClick={() => setSortBy("name")}>
-                Medal {sortBy === "name" && "↑"}
-              </th>
-              {players.map(p => (
-                <th key={p.gamertag} style={{ textAlign: "center", minWidth: 80 }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                    <Avatar player={p.config} size={22} />
-                    <span style={{ fontSize: 8, color: "var(--text-muted)" }}>
-                      {p.gamertag.slice(0, 10)}
-                    </span>
-                  </div>
-                </th>
-              ))}
-              <th style={{ textAlign: "center", cursor: "pointer" }} onClick={() => setSortBy("total")}>
-                Total {sortBy === "total" && "↓"}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {medalRows.map(row => {
-              const maxCount = Math.max(...row.counts);
-              return (
-                <tr key={row.nameId}>
-                  <td>
-                    <span style={{
-                      fontFamily: "var(--font-hud)", fontSize: 13, fontWeight: 700,
-                      color: "var(--text)",
-                    }}>
-                      {row.name}
-                    </span>
-                  </td>
-                  {row.counts.map((count, i) => (
-                    <td key={i} style={{ textAlign: "center" }}>
-                      <span style={{
-                        fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: count === maxCount && count > 0 ? 700 : 400,
-                        color: count === maxCount && count > 0 ? "var(--gold)" : count === 0 ? "var(--border2)" : "var(--text)",
-                      }}>
-                        {count || "—"}
-                      </span>
+      {medals.length === 0 ? (
+        <div style={{ padding: "48px 0", textAlign: "center" }}>
+          <div style={{ fontFamily: "var(--font-ui)", fontSize: 12, color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            No medals in this period
+          </div>
+          <div style={{ fontFamily: "var(--font-body)", fontSize: 12, color: "var(--text-muted)", marginTop: 8 }}>
+            Try a wider date range or switch to "Show All"
+          </div>
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto", background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--border)" }}>
+          <table>
+            <thead>
+              <tr>
+                <th style={{ minWidth: 160, textAlign: "left" }}>Medal</th>
+                {players.map(p => (
+                  <th key={p.gamertag} style={{ minWidth: 80 }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: p.config.color }} />
+                      <span>{p.gamertag}</span>
+                    </div>
+                  </th>
+                ))}
+                <th style={{ minWidth: 60, color: "var(--accent)" }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {medals.map(row => {
+                const maxCount = Math.max(...players.map(p => row.counts[p.gamertag] || 0));
+                return (
+                  <tr key={row.nameId}>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {isInterestingMedal(row.nameId) && (
+                          <div style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--gold)", flexShrink: 0 }} />
+                        )}
+                        <span style={{ fontFamily: "var(--font-ui)", fontSize: 13 }}>{row.name}</span>
+                      </div>
                     </td>
-                  ))}
-                  <td style={{ textAlign: "center" }}>
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--text-muted)" }}>
-                      {row.total}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    {players.map(p => {
+                      const count = row.counts[p.gamertag] || 0;
+                      const isLeader = count === maxCount && count > 0;
+                      return (
+                        <td key={p.gamertag} style={{ color: isLeader ? "var(--gold)" : count === 0 ? "var(--text-muted)" : "var(--text)", fontWeight: isLeader ? 600 : 400 }}>
+                          {count === 0 ? "—" : count}
+                        </td>
+                      );
+                    })}
+                    <td style={{ color: "var(--accent)", fontWeight: 600 }}>{row.total}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div style={{ fontFamily: "var(--font-ui)", fontSize: 10, color: "var(--text-muted)", display: "flex", gap: 16 }}>
+        <span style={{ color: "var(--gold)" }}>● Leader in that medal</span>
+        <span style={{ color: "var(--accent)" }}>Highlighted = notable medals</span>
       </div>
     </div>
   );
