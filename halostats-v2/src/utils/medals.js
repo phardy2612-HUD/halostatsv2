@@ -16,7 +16,7 @@ export const MEDAL_NAMES = {
   // Multi-kills
   1486446780: "Double Kill",
   467375945:  "Triple Kill",
-  ​2168749214: "Overkill",
+  2168749214: "Overkill",
   1720896249: "Killtacular",
   1580027473: "Killtrocity",
   3022799793: "Killamanjaro",
