@@ -8,10 +8,15 @@ export const DATE_RANGES = {
   "All Time":   () => new Date(0),
 };
 
+// Waypoint's isRanked field is unreliable — filter by playlist ID instead.
+// dcb2e24e = Ranked Slayer (your main squad playlist)
+// Everything else = social/casual sessions
+const RANKED_SLAYER_PLAYLIST = "dcb2e24e-05fb-4390-8076-32a0cdb4326e";
+
 export const GAME_MODE_FILTERS = {
   "All":     () => true,
-  "Ranked":  m => m.isRanked,
-  "Custom":  m => !m.isRanked,
+  "Ranked":  m => m.playlistName === RANKED_SLAYER_PLAYLIST,
+  "Social":  m => m.playlistName !== RANKED_SLAYER_PLAYLIST,
 };
 
 // Filter matches by date range
