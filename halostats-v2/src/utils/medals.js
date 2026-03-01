@@ -18,7 +18,6 @@ export const MEDAL_NAMES = {
   1512363953: "Running Riot",
   3655682764: "Rampage",
   1176569867: "Untouchable",
-  2852571933: "Nightmare",   // confirmed in data
   1169390319: "Boogeyman",
   3334154676: "Grim Reaper",
   269174970:  "Demon",
