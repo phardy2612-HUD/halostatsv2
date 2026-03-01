@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { GlowButton, Spinner } from "./UI";
+import { GlowButton } from "./UI";
 
 const STEPS = [
   {
