@@ -22,7 +22,7 @@ export default function App() {
   const [tab,          setTab]          = useState("compare");
   const [fetchCount,   setFetchCount]   = useState(25);
   const [sessionReady, setSessionReady] = useState(false);
-  const { data, loading, error, session, checkSession, fetchSquad } = useSquadData();
+  const { data, loading, error, session, checkSession, fetchSquad, medalMeta } = useSquadData();
 
   const gamertags = PLAYERS.map(p => p.gamertag);
 
@@ -161,7 +161,7 @@ export default function App() {
           ) : (
             <>
               {tab === "compare" && <ComparisonTable squadData={data} />}
-              {tab === "medals"  && <MedalsTable squadData={data} />}
+              {tab === "medals"  && <MedalsTable squadData={data} medalMeta={medalMeta} />}
               {tab === "history" && <MatchHistory squadData={data} />}
             </>
           )}
