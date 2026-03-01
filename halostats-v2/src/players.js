@@ -8,22 +8,22 @@
 
 const PLAYERS = [
   {
-    gamertag: "YourGamertag",
+    gamertag: "Flaresman",
     color: "#00e5ff",
     initials: "YG",
   },
   {
-    gamertag: "Friend1Tag",
+    gamertag: "Dead1n5ide",
     color: "#ff375f",
     initials: "F1",
   },
   {
-    gamertag: "Friend2Tag",
+    gamertag: "Sumpsimus1026",
     color: "#ff9f0a",
     initials: "F2",
   },
   {
-    gamertag: "Friend3Tag",
+    gamertag: "BudbudHardy",
     color: "#30d158",
     initials: "F3",
   },
