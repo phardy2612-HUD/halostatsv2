@@ -24,28 +24,49 @@ export function filterByDate(matches, rangeLabel) {
 function isWin(m)  { return m.outcome === 2; }
 function isLoss(m) { return m.outcome === 3; }
 
+const EMPTY_STATS = (gamertag) => ({
+  gamertag,
+  matchesPlayed: 0, wins: 0, losses: 0, winRate: 0,
+  kills: 0, deaths: 0, assists: 0, kda: 0, kdRaw: 0,
+  avgKills: 0, avgDeaths: 0, avgAssists: 0, avgAccuracy: 0,
+  avgDamageDealt: 0, avgDamageTaken: 0, avgLifeSecs: 0,
+  totalGrenadeKills: 0, avgGrenadeKills: 0,
+  totalPowerWeaponKills: 0, avgPowerWeaponKills: 0,
+  totalHeadshots: 0, totalMeleeKills: 0,
+  maxKillingSpree: 0, totalScore: 0, avgScore: 0,
+  interestingMedals: [], medalTotals: {},
+});
+
 // Compute aggregate stats for one player over a set of matches
 export function aggregatePlayerStats(playerData, matches) {
-  const n = matches.length;
-  if (n === 0) return null;
+  const gamertag = typeof playerData === "string" ? playerData : playerData.gamertag;
 
-  const sum = (key)    => matches.reduce((s, m) => s + (m[key] || 0), 0);
-  const avg = (key)    => n > 0 ? sum(key) / n : 0;
-  const max = (key)    => Math.max(...matches.map(m => m[key] || 0));
+  // Filter out aborted/lobby matches (under 60s with 0 kills and 0 deaths)
+  const validMatches = (matches || []).filter(m => {
+    const secs = parseDuration(m.duration || "PT0S");
+    return !(secs < 60 && m.kills === 0 && m.deaths === 0);
+  });
 
-  const kills            = sum("kills");
-  const deaths           = sum("deaths");
-  const assists          = sum("assists");
-  const wins             = matches.filter(isWin).length;
-  const losses           = matches.filter(isLoss).length;
+  const n = validMatches.length;
+  if (n === 0) return EMPTY_STATS(gamertag);
+
+  const sum = (key) => validMatches.reduce((s, m) => s + (m[key] || 0), 0);
+  const avg = (key) => sum(key) / n;
+  const max = (key) => Math.max(...validMatches.map(m => m[key] || 0));
+
+  const kills   = sum("kills");
+  const deaths  = sum("deaths");
+  const assists = sum("assists");
+  const wins    = validMatches.filter(isWin).length;
+  const losses  = validMatches.filter(isLoss).length;
 
   // Average life duration from ISO durations
-  const totalLifeSecs = matches.reduce((s, m) => s + parseDuration(m.avgLifeDuration), 0);
-  const avgLifeSecs   = n > 0 ? totalLifeSecs / n : 0;
+  const totalLifeSecs = validMatches.reduce((s, m) => s + parseDuration(m.avgLifeDuration), 0);
+  const avgLifeSecs   = totalLifeSecs / n;
 
   // Medal aggregation
   const medalTotals = {};
-  matches.forEach(m => {
+  validMatches.forEach(m => {
     (m.medals || []).forEach(med => {
       if (!medalTotals[med.NameId]) medalTotals[med.NameId] = 0;
       medalTotals[med.NameId] += med.Count;
@@ -58,11 +79,11 @@ export function aggregatePlayerStats(playerData, matches) {
     .sort((a, b) => b.count - a.count);
 
   return {
-    gamertag:         playerData.gamertag,
+    gamertag,
     matchesPlayed:    n,
     wins,
     losses,
-    winRate:          n > 0 ? wins / n : 0,
+    winRate:          wins / n,
     kills,
     deaths,
     assists,
@@ -75,15 +96,15 @@ export function aggregatePlayerStats(playerData, matches) {
     avgDamageDealt:   avg("damageDealt"),
     avgDamageTaken:   avg("damageTaken"),
     avgLifeSecs,
-    totalGrenadeKills:    sum("grenadeKills"),
-    avgGrenadeKills:      avg("grenadeKills"),
-    totalPowerWeaponKills:sum("powerWeaponKills"),
-    avgPowerWeaponKills:  avg("powerWeaponKills"),
-    totalHeadshots:       sum("headshots"),
-    totalMeleeKills:      sum("meleeKills"),
-    maxKillingSpree:      max("maxKillingSpree"),
-    totalScore:           sum("score"),
-    avgScore:             avg("score"),
+    totalGrenadeKills:     sum("grenadeKills"),
+    avgGrenadeKills:       avg("grenadeKills"),
+    totalPowerWeaponKills: sum("powerWeaponKills"),
+    avgPowerWeaponKills:   avg("powerWeaponKills"),
+    totalHeadshots:        sum("headshots"),
+    totalMeleeKills:       sum("meleeKills"),
+    maxKillingSpree:       max("maxKillingSpree"),
+    totalScore:            sum("score"),
+    avgScore:              avg("score"),
     interestingMedals,
     medalTotals,
   };
@@ -91,24 +112,24 @@ export function aggregatePlayerStats(playerData, matches) {
 
 // Build the comparison table rows for all stat categories
 export const STAT_COLUMNS = [
-  { key: "matchesPlayed",      label: "Matches",         format: v => v,               higherBetter: true  },
-  { key: "winRate",            label: "Win Rate",        format: v => `${(v*100).toFixed(1)}%`, higherBetter: true  },
-  { key: "wins",               label: "Wins",            format: v => v,               higherBetter: true  },
-  { key: "losses",             label: "Losses",          format: v => v,               higherBetter: false },
-  { key: "kda",                label: "KDA",             format: v => v.toFixed(2),    higherBetter: true  },
-  { key: "kdRaw",              label: "K/D",             format: v => v.toFixed(2),    higherBetter: true  },
-  { key: "avgKills",           label: "Avg Kills",       format: v => v.toFixed(1),    higherBetter: true  },
-  { key: "avgDeaths",          label: "Avg Deaths",      format: v => v.toFixed(1),    higherBetter: false },
-  { key: "avgAssists",         label: "Avg Assists",     format: v => v.toFixed(1),    higherBetter: true  },
-  { key: "avgAccuracy",        label: "Accuracy",        format: v => `${v.toFixed(1)}%`, higherBetter: true },
-  { key: "avgDamageDealt",     label: "Avg Damage Dealt",format: v => Math.round(v).toLocaleString(), higherBetter: true  },
-  { key: "avgDamageTaken",     label: "Avg Damage Taken",format: v => Math.round(v).toLocaleString(), higherBetter: false },
-  { key: "avgLifeSecs",        label: "Avg Life",        format: v => formatLife(v),   higherBetter: true  },
-  { key: "avgGrenadeKills",    label: "Grenade Kills",   format: v => v.toFixed(2),    higherBetter: true  },
-  { key: "avgPowerWeaponKills",label: "Power Weapon Kills", format: v => v.toFixed(2), higherBetter: true  },
-  { key: "totalHeadshots",     label: "Headshots",       format: v => v,               higherBetter: true  },
-  { key: "maxKillingSpree",    label: "Best Spree",      format: v => v,               higherBetter: true  },
-  { key: "avgScore",           label: "Avg Score",       format: v => Math.round(v).toLocaleString(), higherBetter: true },
+  { key: "matchesPlayed",       label: "Matches",          format: v => v,                                    higherBetter: true  },
+  { key: "winRate",             label: "Win Rate",         format: v => `${(v*100).toFixed(1)}%`,             higherBetter: true  },
+  { key: "wins",                label: "Wins",             format: v => v,                                    higherBetter: true  },
+  { key: "losses",              label: "Losses",           format: v => v,                                    higherBetter: false },
+  { key: "kda",                 label: "KDA",              format: v => v.toFixed(2),                         higherBetter: true  },
+  { key: "kdRaw",               label: "K/D",              format: v => v.toFixed(2),                         higherBetter: true  },
+  { key: "avgKills",            label: "Avg Kills",        format: v => v.toFixed(1),                         higherBetter: true  },
+  { key: "avgDeaths",           label: "Avg Deaths",       format: v => v.toFixed(1),                         higherBetter: false },
+  { key: "avgAssists",          label: "Avg Assists",      format: v => v.toFixed(1),                         higherBetter: true  },
+  { key: "avgAccuracy",         label: "Accuracy",         format: v => `${v.toFixed(1)}%`,                   higherBetter: true  },
+  { key: "avgDamageDealt",      label: "Avg Dmg Dealt",    format: v => Math.round(v).toLocaleString(),       higherBetter: true  },
+  { key: "avgDamageTaken",      label: "Avg Dmg Taken",    format: v => Math.round(v).toLocaleString(),       higherBetter: false },
+  { key: "avgLifeSecs",         label: "Avg Life",         format: v => formatLife(v),                        higherBetter: true  },
+  { key: "avgGrenadeKills",     label: "Nade Kills",       format: v => v.toFixed(2),                         higherBetter: true  },
+  { key: "avgPowerWeaponKills", label: "Power Kills",      format: v => v.toFixed(2),                         higherBetter: true  },
+  { key: "totalHeadshots",      label: "Headshots",        format: v => v,                                    higherBetter: true  },
+  { key: "maxKillingSpree",     label: "Best Spree",       format: v => v,                                    higherBetter: true  },
+  { key: "avgScore",            label: "Avg Score",        format: v => Math.round(v).toLocaleString(),       higherBetter: true  },
 ];
 
 function formatLife(s) {
@@ -121,7 +142,7 @@ function formatLife(s) {
 // Find the best and worst value among players for a stat
 export function getRankings(stats, colKey, higherBetter) {
   const values = stats.map(s => s[colKey] ?? 0);
-  const best = higherBetter ? Math.max(...values) : Math.min(...values);
+  const best  = higherBetter ? Math.max(...values) : Math.min(...values);
   const worst = higherBetter ? Math.min(...values) : Math.max(...values);
   return { best, worst };
 }
