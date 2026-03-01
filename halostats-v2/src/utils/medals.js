@@ -102,3 +102,11 @@ export function parseDuration(iso) {
        + (parseFloat(m[2] || 0) * 60)
        + (parseFloat(m[3] || 0));
 }
+
+// Alias for backward compat
+export function formatSeconds(s) {
+  if (!s) return "0:00";
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, "0")}`;
+}
