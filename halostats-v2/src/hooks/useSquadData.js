@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef } from "react";
 
 export default function useSquadData() {
-  const [data,    setData]    = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState(null);
-  const [session, setSession] = useState(null);
+  const [data,        setData]        = useState(null);
+  const [medalMeta,   setMedalMeta]   = useState(null); // { medals, spriteColumns, spriteSize }
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState(null);
+  const [session,     setSession]     = useState(null);
   const abortRef = useRef(null);
 
   const checkSession = useCallback(async () => {
@@ -50,6 +51,13 @@ export default function useSquadData() {
 
       const json = await res.json();
       setData(json);
+
+      // Fetch medal metadata in parallel (fire and forget — don't block)
+      fetch("/api/halo/medals")
+        .then(r => r.ok ? r.json() : null)
+        .then(meta => { if (meta) setMedalMeta(meta); })
+        .catch(() => {}); // non-fatal
+
       // Refresh session so expiry banner stays accurate
       checkSession();
     } catch (err) {
@@ -59,5 +67,5 @@ export default function useSquadData() {
     }
   }, [checkSession]);
 
-  return { data, loading, error, session, checkSession, fetchSquad };
+  return { data, loading, error, session, checkSession, fetchSquad, medalMeta };
 }
