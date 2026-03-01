@@ -38,6 +38,13 @@ export default async function handler(req, res) {
     }
   }
 
+  // Debug: return raw response to inspect structure
+  if (req.query.debug === "1") {
+    const upstream = await fetch(METADATA_URL, { headers });
+    const raw = await upstream.json();
+    return res.json({ firstMedal: (raw.medals || raw.Medals || [])[0], keys: Object.keys(raw) });
+  }
+
   // Fetch and return medal metadata
   try {
     const upstream = await fetch(METADATA_URL, { headers });
@@ -46,17 +53,26 @@ export default async function handler(req, res) {
     const raw = await upstream.json();
 
     // Normalize into { [nameId]: { name, description, spriteIndex, difficulty } }
+    // API returns lowercase keys: nameId, spriteIndex, difficultyIndex etc.
     const medals = {};
-    for (const medal of (raw.Medals || [])) {
-      medals[medal.NameId] = {
-        nameId:       medal.NameId,
-        name:         medal.Name?.value   || `Medal #${medal.NameId}`,
-        description:  medal.Description?.value || "",
-        spriteIndex:  medal.SpriteIndex ?? 0,
-        difficulty:   medal.DifficultyIndex ?? 0, // 0=normal 1=heroic 2=legendary 3=mythic
-        type:         medal.TypeIndex ?? 0,
+    const medalArray = raw.medals || raw.Medals || [];
+    for (const medal of medalArray) {
+      const id = medal.nameId ?? medal.NameId;
+      if (!id) continue;
+      medals[id] = {
+        nameId:      id,
+        name:        medal.name?.value        ?? medal.Name?.value        ?? `Medal #${id}`,
+        description: medal.description?.value ?? medal.Description?.value ?? "",
+        spriteIndex: medal.spriteIndex        ?? medal.SpriteIndex        ?? 0,
+        difficulty:  medal.difficultyIndex    ?? medal.DifficultyIndex    ?? 0,
+        type:        medal.typeIndex          ?? medal.TypeIndex          ?? 0,
       };
     }
+
+    // Debug: log a sample so we can verify structure in Vercel logs
+    const sample = medalArray[0];
+    console.log("[medals] sample keys:", sample ? Object.keys(sample) : "empty array");
+    console.log("[medals] total medals parsed:", Object.keys(medals).length);
 
     res.setHeader("Cache-Control", "public, max-age=3600"); // cache 1h
     return res.json({ medals, spriteColumns: 16, spriteSize: 256 });
