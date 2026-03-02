@@ -27,12 +27,11 @@ const PLAYERS = [
     color: "#30d158",
     initials: "4",
   },
-  // Add more players like this:
-  // {
-  //   gamertag: "AnotherFriend",
-  //   color: "#bf5af2",
-  //   initials: "AF",
-  // },
+  {
+    gamertag: "ashACE13",
+    color: "#bf5af2",
+    initials: "5",
+  },
 ];
 
 export default PLAYERS;
