@@ -10,22 +10,22 @@ const PLAYERS = [
   {
     gamertag: "Flaresman",
     color: "#00e5ff",
-    initials: "YG",
+    initials: "1",
   },
   {
     gamertag: "Dead1n5ide",
     color: "#ff375f",
-    initials: "F1",
+    initials: "2",
   },
   {
     gamertag: "Sumpsimus1026",
     color: "#ff9f0a",
-    initials: "F2",
+    initials: "3",
   },
   {
     gamertag: "BudbudHardy",
     color: "#30d158",
-    initials: "F3",
+    initials: "4",
   },
   // Add more players like this:
   // {
