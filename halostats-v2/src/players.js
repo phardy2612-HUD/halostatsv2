@@ -28,7 +28,7 @@ const PLAYERS = [
     initials: "4",
   },
   {
-    gamertag: "ashACE13",
+    gamertag: "AshACE13",
     color: "#bf5af2",
     initials: "5",
   },
