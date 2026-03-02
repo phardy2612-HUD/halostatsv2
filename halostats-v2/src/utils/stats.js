@@ -2,10 +2,25 @@
 import { parseDuration, isInterestingMedal, getMedalName } from "./medals";
 
 export const DATE_RANGES = {
-  "This Week":  () => { const d = new Date(); d.setDate(d.getDate() - 7);  return d; },
-  "This Month": () => { const d = new Date(); d.setDate(d.getDate() - 30); return d; },
-  "This Year":  () => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return d; },
-  "All Time":   () => new Date(0),
+  "This Week": () => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    // Get day of week (0-6), adjust so Monday is 0. 
+    // (d.getDay() + 6) % 7 turns Sun(0)->6, Mon(1)->0, Tue(2)->1, etc.
+    const day = (d.getDay() + 6) % 7; 
+    d.setDate(d.getDate() - day);
+    return d;
+  },
+  "This Month": () => {
+    const d = new Date();
+    // Set to the 1st day of the current month at 00:00:00
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  },
+  "This Year": () => {
+    // Set to January 1st of the current year
+    return new Date(new Date().getFullYear(), 0, 1);
+  },
+  "All Time": () => new Date(0),
 };
 
 // Waypoint's isRanked field is unreliable — filter by playlist ID instead.
