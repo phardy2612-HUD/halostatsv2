@@ -207,24 +207,25 @@ export default function MedalsTable({ squadData, medalMeta, medalMetaError }) {
                   >
                     <td style={{ padding: "10px 16px", borderLeft: `2px solid ${cfg.border}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <MedalIcon
-                          spriteIndex={row.spriteIndex ?? 0}
-                          spriteUrl={medalMeta ? spriteUrl : null}
-                          difficulty={row.difficulty}
-                        />
+                        {medalMeta && (
+                          <MedalIcon
+                            spriteIndex={row.spriteIndex ?? 0}
+                            spriteUrl={spriteUrl}
+                            difficulty={row.difficulty}
+                          />
+                        )}
                         <div style={{ minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
                             <span style={{ fontFamily: "var(--font-ui)", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
                               {row.name}
                             </span>
-                            <DifficultyBadge difficulty={row.difficulty} />
+                            {medalMeta && <DifficultyBadge difficulty={row.difficulty} />}
                           </div>
                           {row.description && (
                             <div style={{
                               fontFamily: "var(--font-body)", fontSize: 11,
                               color: "var(--text-muted)", lineHeight: 1.4,
-                              display: "-webkit-box", WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical", overflow: "hidden",
+
                             }}>
                               {row.description}
                             </div>
