@@ -105,3 +105,8 @@ export function formatSeconds(s) {
   const sec = Math.floor(s % 60);
   return `${m}:${sec.toString().padStart(2, "0")}`;
 }
+
+// Stub for when medalMeta is unavailable — returns null so callers fall back to getMedalName
+export function getMedalData(nameId) {
+  return null;
+}
