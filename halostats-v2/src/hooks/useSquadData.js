@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef } from "react";
 
 export default function useSquadData() {
-  const [data,        setData]        = useState(null);
-  const [medalMeta,   setMedalMeta]   = useState(null); // { medals, spriteColumns, spriteSize }
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState(null);
-  const [session,     setSession]     = useState(null);
+  const [data,          setData]          = useState(null);
+  const [medalMeta,     setMedalMeta]     = useState(null);
+  const [medalMetaError,setMedalMetaError]= useState(null);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState(null);
+  const [session,       setSession]       = useState(null);
   const abortRef = useRef(null);
 
   const checkSession = useCallback(async () => {
@@ -21,7 +22,7 @@ export default function useSquadData() {
     }
   }, []);
 
-  const fetchSquad = useCallback(async (gamertags, count = 25) => {
+  const fetchSquad = useCallback(async (gamertags, count = 100) => {
     if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
 
@@ -39,7 +40,6 @@ export default function useSquadData() {
       if (res.status === 401) {
         const body = await res.json();
         setError(body.code === "EXPIRED" ? "token_expired" : "auth_failed");
-        // Refresh session state
         checkSession();
         return;
       }
@@ -52,13 +52,28 @@ export default function useSquadData() {
       const json = await res.json();
       setData(json);
 
-      // Fetch medal metadata in parallel (fire and forget — don't block)
+      // Fetch medal metadata — log errors so we can debug
       fetch("/api/halo/medals")
-        .then(r => r.ok ? r.json() : null)
-        .then(meta => { if (meta) setMedalMeta(meta); })
-        .catch(() => {}); // non-fatal
+        .then(async r => {
+          if (!r.ok) {
+            const err = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+            console.warn("[medals] metadata fetch failed:", err);
+            setMedalMetaError(err.error || `HTTP ${r.status}`);
+            return null;
+          }
+          return r.json();
+        })
+        .then(meta => {
+          if (meta) {
+            console.log("[medals] loaded", Object.keys(meta.medals || {}).length, "medals");
+            setMedalMeta(meta);
+          }
+        })
+        .catch(err => {
+          console.warn("[medals] fetch exception:", err.message);
+          setMedalMetaError(err.message);
+        });
 
-      // Refresh session so expiry banner stays accurate
       checkSession();
     } catch (err) {
       if (err.name !== "AbortError") setError(err.message);
@@ -67,5 +82,5 @@ export default function useSquadData() {
     }
   }, [checkSession]);
 
-  return { data, loading, error, session, checkSession, fetchSquad, medalMeta };
+  return { data, loading, error, session, checkSession, fetchSquad, medalMeta, medalMetaError };
 }
