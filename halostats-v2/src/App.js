@@ -6,47 +6,39 @@ import TokenSettings from "./components/TokenSettings";
 import TokenExpiryBanner from "./components/TokenExpiryBanner";
 import ComparisonTable from "./components/ComparisonTable";
 import MedalsTable from "./components/MedalsTable";
-import MatchHistory from "./components/MatchHistory";
-import { Avatar, Spinner, TabBar, GlowButton, ErrorBanner } from "./components/UI";
+import { PlayerAvatar, Spinner, GlowButton, ErrorBanner } from "./components/UI";
 
+// History tab hidden until UI is ready
 const TABS = [
   { id: "compare", label: "Compare", icon: "⚔️" },
   { id: "medals",  label: "Medals",  icon: "🏅" },
-  { id: "history", label: "History", icon: "📋" },
-  { id: "token",   label: "Token",   icon: "🔑" },
 ];
 
-const FETCH_COUNTS = [25, 50, 100];
+const FETCH_COUNT = 100; // fixed — no UI toggle needed
 
 export default function App() {
   const [tab,          setTab]          = useState("compare");
-  const [fetchCount,   setFetchCount]   = useState(25);
   const [sessionReady, setSessionReady] = useState(false);
-  const { data, loading, error, session, checkSession, fetchSquad, medalMeta } = useSquadData();
+  const { data, loading, error, session, checkSession, fetchSquad, medalMeta, medalMetaError } = useSquadData();
 
   const gamertags = PLAYERS.map(p => p.gamertag);
 
   useEffect(() => {
     checkSession().then(sess => {
       setSessionReady(true);
-      if (sess?.loggedIn) fetchSquad(gamertags, fetchCount);
+      if (sess?.loggedIn) fetchSquad(gamertags, FETCH_COUNT);
     });
   }, []); // eslint-disable-line
 
   function handleTokenSaved() {
     checkSession().then(() => {
       setTab("compare");
-      fetchSquad(gamertags, fetchCount);
+      fetchSquad(gamertags, FETCH_COUNT);
     });
   }
 
   function handleRefresh() {
-    fetchSquad(gamertags, fetchCount);
-  }
-
-  function handleCountChange(n) {
-    setFetchCount(n);
-    fetchSquad(gamertags, n);
+    fetchSquad(gamertags, FETCH_COUNT);
   }
 
   if (!sessionReady) {
@@ -60,10 +52,9 @@ export default function App() {
   if (!session?.loggedIn || tab === "token") {
     return (
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100dvh" }}>
-        <div style={{ flex: 1, overflowY: "auto", paddingBottom: session?.loggedIn ? 80 : 0 }}>
+        <div style={{ flex: 1, overflowY: "auto" }}>
           <TokenSettings onSaved={handleTokenSaved} />
         </div>
-        {session?.loggedIn && <TabBar tabs={TABS} active={tab} onChange={setTab} />}
       </div>
     );
   }
@@ -71,7 +62,7 @@ export default function App() {
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100dvh" }}>
 
-      {/* ── Header — Waypoint style ── */}
+      {/* ── Header ── */}
       <header style={{
         background: "rgba(10,10,10,0.95)", backdropFilter: "blur(20px)",
         borderBottom: "1px solid var(--border2)",
@@ -79,8 +70,9 @@ export default function App() {
         padding: "0 16px",
       }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          {/* Top bar */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 48 }}>
+
+          {/* Top bar — logo + player avatars */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 52 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 28, height: 28 }}>
                 <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -93,20 +85,21 @@ export default function App() {
               </span>
             </div>
 
-            {/* Player avatars */}
-            <div style={{ display: "flex", gap: 6 }}>
-              {PLAYERS.map(p => <Avatar key={p.gamertag} player={p} size={26} />)}
+            {/* Real Waypoint avatars */}
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {PLAYERS.map(p => (
+                <PlayerAvatar key={p.gamertag} player={p} size={32} />
+              ))}
             </div>
           </div>
 
-          {/* Token expiry */}
+          {/* Token expiry warning */}
           {session && <TokenExpiryBanner session={session} onUpdate={() => setTab("token")} />}
 
-          {/* Tab nav + controls */}
+          {/* Tab nav + refresh */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--border)" }}>
-            {/* Tabs */}
             <div style={{ display: "flex" }}>
-              {TABS.filter(t => t.id !== "token").map(t => (
+              {TABS.map(t => (
                 <button key={t.id} onClick={() => setTab(t.id)} style={{
                   fontFamily: "var(--font-ui)", fontSize: 11, fontWeight: 600,
                   letterSpacing: "0.1em", textTransform: "uppercase",
@@ -121,29 +114,32 @@ export default function App() {
               ))}
             </div>
 
-            {/* Fetch count + refresh */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {FETCH_COUNTS.map(n => (
-                <button key={n} className={`chip ${fetchCount === n ? "active" : ""}`}
-                  style={{ padding: "4px 10px", fontSize: 11 }}
-                  onClick={() => handleCountChange(n)}>
-                  {n}
-                </button>
-              ))}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {loading && (
+                <span style={{ fontFamily: "var(--font-ui)", fontSize: 10, color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  Fetching…
+                </span>
+              )}
               <button onClick={handleRefresh} disabled={loading} style={{
                 background: "none", border: "none", cursor: loading ? "not-allowed" : "pointer",
                 color: loading ? "var(--text-muted)" : "var(--accent)",
-                fontSize: 16, padding: "0 4px",
-                animation: loading ? "spin 0.7s linear infinite" : "none",
+                fontSize: 18, padding: "0 4px",
                 display: "inline-block",
+                animation: loading ? "spin 0.7s linear infinite" : "none",
               }} title="Refresh">↻</button>
+              <button onClick={() => setTab("token")} style={{
+                background: "none", border: "1px solid var(--border2)", borderRadius: "var(--r-sm)",
+                padding: "5px 10px", cursor: "pointer",
+                fontFamily: "var(--font-ui)", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase",
+                color: "var(--text-muted)",
+              }}>🔑 Token</button>
             </div>
           </div>
         </div>
       </header>
 
       {/* ── Content ── */}
-      <main style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
+      <main style={{ flex: 1, overflowY: "auto", paddingBottom: 40 }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 16px" }}>
 
           {error && (
@@ -161,8 +157,7 @@ export default function App() {
           ) : (
             <>
               {tab === "compare" && <ComparisonTable squadData={data} />}
-              {tab === "medals"  && <MedalsTable squadData={data} medalMeta={medalMeta} />}
-              {tab === "history" && <MatchHistory squadData={data} />}
+              {tab === "medals"  && <MedalsTable squadData={data} medalMeta={medalMeta} medalMetaError={medalMetaError} />}
             </>
           )}
 
@@ -173,24 +168,6 @@ export default function App() {
           )}
         </div>
       </main>
-
-      {/* Bottom nav for mobile (token tab access) */}
-      <nav style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
-        background: "rgba(10,10,10,0.97)", backdropFilter: "blur(20px)",
-        borderTop: "1px solid var(--border2)",
-        display: "flex", justifyContent: "flex-end",
-        padding: "8px 16px max(8px, env(safe-area-inset-bottom))",
-      }}>
-        <button onClick={() => setTab("token")} style={{
-          background: "none", border: "1px solid var(--border2)", borderRadius: "var(--r-sm)",
-          padding: "6px 12px", cursor: "pointer",
-          fontFamily: "var(--font-ui)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase",
-          color: "var(--text-muted)",
-        }}>
-          🔑 Token
-        </button>
-      </nav>
     </div>
   );
 }
