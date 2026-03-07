@@ -1,19 +1,56 @@
-import React from "react";
+import React, { useState } from "react";
 
-// Player avatar circle
-export function Avatar({ player, size = 36 }) {
+// Real Waypoint emblem avatar — falls back to initials if image fails
+// Waypoint emblem URL pattern (public, no auth needed):
+// https://settings.svc.halowaypoint.com/spartan-emblems/<xuid>?size=256&color=...
+// But we proxy through our own endpoint to keep tokens server-side.
+// Simpler: use the public hi/spartan-emblems endpoint which doesn't require auth.
+export function PlayerAvatar({ player, size = 36 }) {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  // Waypoint's public emblem CDN — xuid needed, available in players.js
+  const emblemUrl = player.xuid
+    ? `https://settings.svc.halowaypoint.com/spartan-emblems/${player.xuid}?size=256`
+    : null;
+
+  if (!emblemUrl || imgFailed) {
+    // Fallback: coloured initials circle
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: "50%", flexShrink: 0,
+        background: player.color + "22",
+        border: `1.5px solid ${player.color}55`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "var(--font-mono)", fontSize: size * 0.3, fontWeight: 700,
+        color: player.color, letterSpacing: 0,
+        overflow: "hidden",
+      }}>
+        {player.initials}
+      </div>
+    );
+  }
+
   return (
     <div style={{
       width: size, height: size, borderRadius: "50%", flexShrink: 0,
-      background: player.color + "22",
       border: `1.5px solid ${player.color}55`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: "var(--font-mono)", fontSize: size * 0.3, fontWeight: 700,
-      color: player.color, letterSpacing: 0,
-    }}>
-      {player.initials}
+      overflow: "hidden", background: "var(--surface2)",
+    }}
+      title={player.gamertag}
+    >
+      <img
+        src={emblemUrl}
+        alt={player.gamertag}
+        onError={() => setImgFailed(true)}
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      />
     </div>
   );
+}
+
+// Keep Avatar as alias for backwards compat (used in ComparisonTable)
+export function Avatar({ player, size = 36 }) {
+  return <PlayerAvatar player={player} size={size} />;
 }
 
 // Section header label — Waypoint style
