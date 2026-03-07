@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { FilterBar } from "./UI";
-import { getMedalName, isInterestingMedal } from "../utils/medals";
+import { getMedalData, getMedalName, isInterestingMedal } from "../utils/medals";
 import { filterByDate, DATE_RANGES, GAME_MODE_FILTERS } from "../utils/stats";
 import PLAYERS from "../players";
 
@@ -11,25 +11,36 @@ const SPRITE_COLS = 16;
 const SPRITE_SIZE = 256;
 const DISPLAY_SIZE = 48;
 
-function MedalIcon({ spriteIndex, spriteUrl }) {
+function MedalIcon({ spriteIndex, spriteUrl, difficulty = 0 }) {
   const col = spriteIndex % SPRITE_COLS;
   const row = Math.floor(spriteIndex / SPRITE_COLS);
   const scale = DISPLAY_SIZE / SPRITE_SIZE;
+  const cfg = DIFFICULTY[difficulty] || DIFFICULTY[0];
+
+  const wrapStyle = {
+    width: DISPLAY_SIZE,
+    height: DISPLAY_SIZE,
+    borderRadius: "50%",
+    overflow: "hidden",
+    flexShrink: 0,
+    border: `1.5px solid ${cfg.border}`,
+    boxShadow: cfg.glow || "none",
+    transition: "box-shadow 0.2s",
+  };
 
   if (!spriteUrl) {
     return (
       <div style={{
-        width: DISPLAY_SIZE, height: DISPLAY_SIZE, borderRadius: "50%",
-        background: "var(--surface3)", border: "1px solid var(--border2)",
+        ...wrapStyle,
+        background: "var(--surface3)",
         display: "flex", alignItems: "center", justifyContent: "center",
         fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-muted)",
-        flexShrink: 0,
       }}>?</div>
     );
   }
 
   return (
-    <div style={{ width: DISPLAY_SIZE, height: DISPLAY_SIZE, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
+    <div style={wrapStyle}>
       <div style={{
         width: SPRITE_SIZE,
         height: SPRITE_SIZE,
@@ -45,26 +56,28 @@ function MedalIcon({ spriteIndex, spriteUrl }) {
   );
 }
 
-const DIFFICULTY_COLORS = {
-  0: { bg: "rgba(255,255,255,0.08)", color: "var(--text-muted)",  label: "Normal"    },
-  1: { bg: "rgba(0,180,216,0.15)",   color: "var(--accent)",      label: "Heroic"    },
-  2: { bg: "rgba(200,169,81,0.15)",  color: "var(--gold)",        label: "Legendary" },
-  3: { bg: "rgba(255,80,80,0.15)",   color: "#ff5050",            label: "Mythic"    },
+const DIFFICULTY = {
+  0: { bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.45)", label: "Normal",    glow: null,                              border: "rgba(255,255,255,0.12)" },
+  1: { bg: "rgba(0,180,216,0.15)",   color: "var(--accent)",          label: "Heroic",    glow: "0 0 10px rgba(0,180,216,0.5)",    border: "rgba(0,180,216,0.5)"    },
+  2: { bg: "rgba(200,169,81,0.18)",  color: "var(--gold)",            label: "Legendary", glow: "0 0 14px rgba(200,169,81,0.65)",  border: "rgba(200,169,81,0.7)"   },
+  3: { bg: "rgba(220,60,60,0.18)",   color: "#ff6060",                label: "Mythic",    glow: "0 0 18px rgba(220,60,60,0.8), 0 0 40px rgba(220,60,60,0.3)", border: "rgba(220,60,60,0.8)" },
 };
 
 function DifficultyBadge({ difficulty }) {
-  const cfg = DIFFICULTY_COLORS[difficulty] || DIFFICULTY_COLORS[0];
+  const cfg = DIFFICULTY[difficulty] || DIFFICULTY[0];
   return (
     <span style={{
-      fontFamily: "var(--font-ui)", fontSize: 9, fontWeight: 600,
+      fontFamily: "var(--font-ui)", fontSize: 9, fontWeight: 700,
       letterSpacing: "0.08em", textTransform: "uppercase",
-      padding: "2px 6px", borderRadius: 2,
-      background: cfg.bg, color: cfg.color, flexShrink: 0,
+      padding: "2px 7px", borderRadius: 2,
+      background: cfg.bg, color: cfg.color,
+      border: `1px solid ${cfg.border}`,
+      flexShrink: 0,
     }}>{cfg.label}</span>
   );
 }
 
-export default function MedalsTable({ squadData, medalMeta }) {
+export default function MedalsTable({ squadData, medalMeta, medalMetaError }) {
   const [dateRange, setDateRange] = useState("This Month");
   const [gameMode, setGameMode]   = useState("All");
   const [showAll,  setShowAll]    = useState(false);
@@ -99,7 +112,7 @@ export default function MedalsTable({ squadData, medalMeta }) {
     const filteredIds = [...allIds].filter(id => showAll || isInterestingMedal(id));
 
     const medalRows = filteredIds.map(id => {
-      const meta = medalMeta?.medals?.[id];
+      const meta = medalMeta?.medals?.[id] || getMedalData(id);
       const counts = {};
       let total = 0;
       playerList.forEach(p => {
@@ -153,9 +166,9 @@ export default function MedalsTable({ squadData, medalMeta }) {
         </div>
       </div>
 
-      {!medalMeta && (
-        <div style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: "var(--r)", padding: "10px 14px", fontFamily: "var(--font-ui)", fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.05em" }}>
-          Loading medal images from Waypoint…
+      {medalMetaError && !medalMeta && (
+        <div style={{ fontFamily: "var(--font-ui)", fontSize: 10, color: "var(--text-muted)", letterSpacing: "0.05em" }}>
+          Using offline medal data · Live images unavailable ({medalMetaError})
         </div>
       )}
 
@@ -184,6 +197,7 @@ export default function MedalsTable({ squadData, medalMeta }) {
             <tbody>
               {medals.map(row => {
                 const maxCount = Math.max(...players.map(p => row.counts[p.gamertag] || 0));
+                const cfg = DIFFICULTY[row.difficulty] || DIFFICULTY[0];
                 return (
                   <tr key={row.nameId}
                     onMouseEnter={e => setTooltip({ nameId: row.nameId, x: e.clientX, y: e.clientY })}
@@ -191,11 +205,12 @@ export default function MedalsTable({ squadData, medalMeta }) {
                     onMouseLeave={() => setTooltip(null)}
                     style={{ cursor: "default" }}
                   >
-                    <td style={{ padding: "10px 16px" }}>
+                    <td style={{ padding: "10px 16px", borderLeft: `2px solid ${cfg.border}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <MedalIcon
                           spriteIndex={row.spriteIndex ?? 0}
                           spriteUrl={medalMeta ? spriteUrl : null}
+                          difficulty={row.difficulty}
                         />
                         <div style={{ minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
@@ -254,7 +269,7 @@ export default function MedalsTable({ squadData, medalMeta }) {
           pointerEvents: "none",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-            <MedalIcon spriteIndex={tooltipMedal.spriteIndex ?? 0} spriteUrl={medalMeta ? spriteUrl : null} />
+            <MedalIcon spriteIndex={tooltipMedal.spriteIndex ?? 0} spriteUrl={medalMeta ? spriteUrl : null} difficulty={tooltipMedal.difficulty} />
             <div>
               <div style={{ fontFamily: "var(--font-ui)", fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 5 }}>
                 {tooltipMedal.name}
@@ -272,7 +287,7 @@ export default function MedalsTable({ squadData, medalMeta }) {
 
       {/* Legend */}
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-        {Object.entries(DIFFICULTY_COLORS).reverse().map(([d, cfg]) => (
+        {Object.entries(DIFFICULTY).reverse().map(([d, cfg]) => (
           <span key={d} style={{ fontFamily: "var(--font-ui)", fontSize: 10, color: cfg.color, letterSpacing: "0.08em", textTransform: "uppercase" }}>
             ● {cfg.label}
           </span>
